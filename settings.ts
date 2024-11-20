@@ -5,10 +5,12 @@ import * as localForage from "localforage";
 
 export interface TikzjaxPluginSettings {
 	invertColorsInDarkMode: boolean;
+	preamblePath: string;
 }
 
 export const DEFAULT_SETTINGS: TikzjaxPluginSettings = {
-	invertColorsInDarkMode: true
+	invertColorsInDarkMode: true,
+	preamblePath: "preamble.sty"
 }
 
 
@@ -41,6 +43,17 @@ export class TikzjaxSettingTab extends PluginSettingTab {
 				.onChange(async (value) => {
 					this.plugin.settings.invertColorsInDarkMode = value;
 
+					await this.plugin.saveSettings();
+				}));
+
+				
+		new Setting(containerEl)
+			.setName('Preamble Path')
+			.setDesc('Path to global preamble. Leave blank for no additional preamble. (Changing this requires a reload!)')
+			.addText(text => text
+				.setValue(this.plugin.settings.preamblePath)
+				.onChange(async (value) => {
+					this.plugin.settings.preamblePath = value;
 					await this.plugin.saveSettings();
 				}));
 

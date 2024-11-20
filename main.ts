@@ -1,4 +1,4 @@
-import { Plugin, WorkspaceWindow } from 'obsidian';
+import { Notice, Plugin, WorkspaceWindow } from 'obsidian';
 import { TikzjaxPluginSettings, DEFAULT_SETTINGS, TikzjaxSettingTab } from "./settings";
 import { optimize } from "./svgo.browser";
 
@@ -8,10 +8,13 @@ import tikzjaxJs from 'inline:./tikzjax.js';
 
 export default class TikzjaxPlugin extends Plugin {
 	settings: TikzjaxPluginSettings;
+	preamble: string;
 
 	async onload() {
 		await this.loadSettings();
 		this.addSettingTab(new TikzjaxSettingTab(this.app, this));
+
+		const preamble = this.loadPreamble();
 
 		// Support pop-out windows
 		this.app.workspace.onLayoutReady(() => {
@@ -24,7 +27,7 @@ export default class TikzjaxPlugin extends Plugin {
 
 		this.addSyntaxHighlighting();
 		
-		this.registerTikzCodeBlock();
+		this.registerTikzCodeBlock(await preamble);
 	}
 
 	onunload() {
@@ -40,6 +43,22 @@ export default class TikzjaxPlugin extends Plugin {
 		await this.saveData(this.settings);
 	}
 
+
+	async loadPreamble() {
+		const path = this.settings.preamblePath;
+
+		// If the User wishes no preamble, he won't get one.
+		if (path == "") {
+			return ""
+		}
+
+		try {
+			return this.app.vault.adapter.read(path);
+		} catch (e) {
+			new Notice(`TikZJax: Could not find preamble file at: '${path}'.`, 3000);
+			return ""
+		}
+	}
 
 	loadTikZJax(doc: Document) {
 		const s = document.createElement("script");
@@ -92,14 +111,14 @@ export default class TikzjaxPlugin extends Plugin {
 	}
 
 
-	registerTikzCodeBlock() {
+	registerTikzCodeBlock(preamble: string) {
 		this.registerMarkdownCodeBlockProcessor("tikz", (source, el, ctx) => {
 			const script = el.createEl("script");
 
 			script.setAttribute("type", "text/tikz");
 			script.setAttribute("data-show-console", "true");
 
-			script.setText(this.tidyTikzSource(source));
+			script.setText(preamble + this.tidyTikzSource(source));
 		});
 	}
 
